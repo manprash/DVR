@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+require "json"
+require "date"
+
+$:.unshift(File.expand_path(".",__FILE__))
+
+source = ARGV.first
+unless File.exists? source
+	puts "Specified path for #{source} don't exists."
+	return
+end
+
+stations = {}
+recordings_each_day = {}
+
+recordings = JSON.parse(File.read(source))
+recordings["response"]["recordings"].each do |recording|
+
+	date = Time.at(recording["start"]/1000).to_datetime.strftime("%B, %d %Y")
+
+	unless stations[recording["stationId"]]
+		stations[recording["stationId"]] = {hd: 0, non_hd: 0, recordings: 0}
+	end
+
+	unless recordings_each_day[date]
+		recordings_each_day[date] = 0
+	end
+
+	if recording["hd"]
+		stations[recording["stationId"]][:hd] += 1
+	else
+		stations[recording["stationId"]][:non_hd] += 1
+	end
+
+	stations[recording["stationId"]][:recordings] += 1
+
+	recordings_each_day[date] += 1
+end
+
+stations.each_pair do |station, stats|
+	puts "Today's recordings for station id: #{station}"
+	puts "Total recordings: #{stats[:recordings]}"
+	puts "HD recordings: #{stats[:hd]}"
+	puts "NON_HD recordings: #{stats[:non_hd]}"
+	puts "--------------------------------------------------------------"
+	puts
+end
+
+recordings_each_day.each_pair do |date, count|
+	video = (count.zero? || count == 1) ? "video" : "videos" 
+	puts "You can watch #{count} #{video} on #{date}"
+end
